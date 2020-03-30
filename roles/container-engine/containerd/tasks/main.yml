@@ -1,14 +1,4 @@
 ---
-- name: check if fedora coreos
-  stat:
-    path: /run/ostree-booted
-  register: ostree
-
-- name: set is_ostree
-  set_fact:
-    is_ostree: "{{ ostree.stat.exists }}"
-
-
 - name: Fail containerd setup if distribution is not supported
   fail:
     msg: "{{ ansible_distribution }} is not supported by containerd."
@@ -35,7 +25,6 @@
     - facts
 
 - include_tasks: containerd_repo.yml
-  when: not is_ostree
 
 - name: Create containerd service systemd directory if it doesn't exist
   file:
@@ -74,7 +63,7 @@
     mode: 0644
   when:
     - ansible_os_family in ['Ubuntu', 'Debian']
-    - not is_ostree
+    - not is_atomic
 
 - name: ensure containerd packages are installed
   action: "{{ containerd_package_info.pkg_mgr }}"
@@ -91,7 +80,7 @@
   with_items: "{{ containerd_package_info.pkgs }}"
   notify: restart containerd
   when:
-    - not is_ostree
+    - not is_atomic
     - containerd_package_info.pkgs|length > 0
   ignore_errors: true
 
@@ -112,7 +101,7 @@
   delay: "{{ retry_stagger | d(3) }}"
   notify: restart containerd
   when:
-    - not is_ostree
+    - not is_atomic
     - not runc_stat.stat.exists
 
 - include_tasks: crictl.yml

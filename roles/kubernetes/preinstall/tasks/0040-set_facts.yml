@@ -1,4 +1,20 @@
 ---
+- name: set architecture_groups
+  set_fact:
+    architecture_groups:
+      x86_64: amd64
+      aarch64: arm64
+      armv7l: arm
+
+- name: ansible_architecture_rename
+  set_fact:
+    host_architecture: >-
+      {%- if ansible_architecture in architecture_groups -%}
+      {{ architecture_groups[ansible_architecture] }}
+      {%- else -%}
+       {{ ansible_architecture }}
+      {% endif %}
+
 - name: Force binaries directory for Container Linux by CoreOS and Flatcar
   set_fact:
     bin_dir: "/opt/bin"
@@ -6,22 +22,19 @@
   tags:
     - facts
 
-- name: check if booted with ostree
+- name: check if atomic host
   stat:
     path: /run/ostree-booted
   register: ostree
 
-- name: set is_fedora_coreos
-  lineinfile:
-    path: /etc/os-release
-    line: "VARIANT_ID=coreos"
-    state: present
-  check_mode: yes
-  register: os_variant_coreos
-
-- name: set is_fedora_coreos
+- name: set is_atomic
   set_fact:
-    is_fedora_coreos: "{{ ostree.stat.exists and os_variant_coreos is not changed }}"
+    is_atomic: "{{ ostree.stat.exists }}"
+
+- name: set kube_cert_group on atomic hosts
+  set_fact:
+    kube_cert_group: "kube"
+  when: is_atomic
 
 - name: check resolvconf
   shell: which resolvconf
@@ -169,6 +182,7 @@
     kube_etcd_cacert_file: "etcd/ca.crt"
     kube_etcd_cert_file: "apiserver-etcd-client.crt"
     kube_etcd_key_file: "apiserver-etcd-client.key"
+    etcd_deployment_type: host
   when:
     - etcd_kubeadm_enabled
 

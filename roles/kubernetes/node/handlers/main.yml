@@ -1,5 +1,5 @@
 ---
-- name: Node | restart kubelet
+- name: restart kubelet
   command: /bin/true
   notify:
     - Kubelet | reload systemd

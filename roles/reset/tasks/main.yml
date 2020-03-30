@@ -157,7 +157,6 @@
   with_items:
     - filter
     - nat
-    - mangle
   when: flush_iptables|bool
   tags:
     - iptables

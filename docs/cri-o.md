@@ -19,14 +19,9 @@ skip_downloads: false
 ## k8s-cluster.yml
 
 ```yaml
+etcd_deployment_type: host
 kubelet_deployment_type: host
 container_manager: crio
-```
-
-## etcd.yml
-
-```yaml
-etcd_deployment_type: host
 ```
 
 [CRI-O]: https://cri-o.io/

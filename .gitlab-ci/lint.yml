@@ -2,7 +2,6 @@
 yamllint:
   extends: .job
   stage: unit-tests
-  tags: [light]
   variables:
     LANG: C.UTF-8
   script:
@@ -12,17 +11,15 @@ yamllint:
 vagrant-validate:
   extends: .job
   stage: unit-tests
-  tags: [light]
-  variables:
-    VAGRANT_VERSION: 2.2.4
   script:
-    - ./tests/scripts/vagrant-validate.sh
+    - curl -sL https://releases.hashicorp.com/vagrant/2.2.4/vagrant_2.2.4_x86_64.deb -o /tmp/vagrant_2.2.4_x86_64.deb
+    - dpkg -i /tmp/vagrant_2.2.4_x86_64.deb
+    - vagrant validate --ignore-provider
   except: ['triggers', 'master']
 
 ansible-lint:
   extends: .job
   stage: unit-tests
-  tags: [light]
   # lint every yml/yaml file that looks like it contains Ansible plays
   script: |-
     grep -Rl '^- hosts: \|^  hosts: ' --include \*.yml --include \*.yaml . | xargs -P 4 -n 25 ansible-lint -v
@@ -31,7 +28,6 @@ ansible-lint:
 syntax-check:
   extends: .job
   stage: unit-tests
-  tags: [light]
   variables:
     ANSIBLE_INVENTORY: inventory/local-tests.cfg
     ANSIBLE_REMOTE_USER: root
@@ -47,7 +43,6 @@ syntax-check:
 
 tox-inventory-builder:
   stage: unit-tests
-  tags: [light]
   extends: .job
   before_script:
     - ./tests/scripts/rebase.sh
@@ -61,7 +56,6 @@ tox-inventory-builder:
 
 markdownlint:
   stage: unit-tests
-  tags: [light]
   image: node
   before_script:
     - npm install -g markdownlint-cli

@@ -9,8 +9,13 @@ list_descendants ()
   [[ -n "$children" ]] && echo "$children"
 }
 
-shim_search="^docker-containerd-shim|^containerd-shim"
+shim_search="^docker-containerd-shim"
 count_shim_processes=$(pgrep -f $shim_search | wc -l)
+
+if [ ${count_shim_processes} -eq 0 ]; then
+        shim_search="^containerd-shim"
+        count_shim_processes=$(pgrep -f $shim_search | wc -l)
+fi
 
 if [ ${count_shim_processes} -gt 0 ]; then
         # Find all container pids from shims
@@ -18,7 +23,7 @@ if [ ${count_shim_processes} -gt 0 ]; then
         # Filter out valid docker pids, leaving the orphans
         egrep -v $(docker ps -q | xargs docker inspect --format '{{.State.Pid}}' | awk '{printf "%s%s",sep,$1; sep="|"}'))
 
-        if [[ -n "$orphans" && -n "$(ps -o ppid= $orphans)" ]]
+        if [[ -n "$orphans" ]]
         then
                 # Get shim pids of orphans
                 orphan_shim_pids=$(ps -o pid= $(ps -o ppid= $orphans))

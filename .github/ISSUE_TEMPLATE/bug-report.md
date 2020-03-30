@@ -18,8 +18,6 @@ explain why.
 
 - **Version of Ansible** (`ansible --version`):
 
-- **Version of Python** (`python --version`):
-
 
 **Kubespray version (commit) (`git rev-parse --short HEAD`):**
 
@@ -27,8 +25,8 @@ explain why.
 **Network plugin used**:
 
 
-**Full inventory with variables (`ansible -i inventory/sample/inventory.ini all -m debug -a "var=hostvars[inventory_hostname]"`):**
-<!-- We recommend using snippets services like https://gist.github.com/ etc. -->
+**Copy of your inventory file:**
+
 
 **Command used to invoke ansible**:
 

@@ -30,14 +30,14 @@ spec:
           imagePullPolicy: {{ k8s_image_pull_policy }}
           env:
             - name: REGISTRY_HTTP_ADDR
-              value: :{{ registry_port }}
+              value: :5000
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: /var/lib/registry
           volumeMounts:
             - name: registry-pvc
               mountPath: /var/lib/registry
           ports:
-            - containerPort: {{ registry_port }}
+            - containerPort: 5000
               name: registry
               protocol: TCP
       volumes:

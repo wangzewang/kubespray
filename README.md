@@ -21,14 +21,14 @@ To deploy the cluster you can use :
 
 ```ShellSession
 # Install dependencies from ``requirements.txt``
-sudo pip3 install -r requirements.txt
+sudo pip install -r requirements.txt
 
 # Copy ``inventory/sample`` as ``inventory/mycluster``
 cp -rfp inventory/sample inventory/mycluster
 
 # Update Ansible inventory file with inventory builder
 declare -a IPS=(10.10.1.3 10.10.1.4 10.10.1.5)
-CONFIG_FILE=inventory/mycluster/hosts.yaml python3 contrib/inventory_builder/inventory.py ${IPS[@]}
+CONFIG_FILE=inventory/mycluster/inventory.ini python3 contrib/inventory_builder/inventory.py ${IPS[@]}
 
 # Review and change parameters under ``inventory/mycluster/group_vars``
 cat inventory/mycluster/group_vars/all/all.yml
@@ -38,7 +38,7 @@ cat inventory/mycluster/group_vars/k8s-cluster/k8s-cluster.yml
 # The option `--become` is required, as for example writing SSL keys in /etc/,
 # installing packages and interacting with various systemd daemons.
 # Without --become the playbook will fail to run!
-ansible-playbook -i inventory/mycluster/hosts.yaml  --become --become-user=root cluster.yml
+ansible-playbook -i inventory/mycluster/inventory.ini --become --become-user=root cluster.yml
 ```
 
 Note: When Ansible is already installed via system packages on the control machine, other python packages installed via `sudo pip install -r requirements.txt` will go to a different directory tree (e.g. `/usr/local/lib/python2.7/dist-packages` on Ubuntu) from Ansible's (e.g. `/usr/lib/python2.7/dist-packages/ansible` still on Ubuntu).
@@ -83,7 +83,6 @@ vagrant up
 - [Network plugins](#network-plugins)
 - [Vagrant install](docs/vagrant.md)
 - [CoreOS bootstrap](docs/coreos.md)
-- [Fedora CoreOS bootstrap](docs/fcos.md)
 - [Debian Jessie setup](docs/debian.md)
 - [openSUSE setup](docs/opensuse.md)
 - [Downloaded artifacts](docs/downloads.md)
@@ -94,7 +93,6 @@ vagrant up
 - [vSphere](docs/vsphere.md)
 - [Packet Host](docs/packet.md)
 - [Large deployments](docs/large-deployments.md)
-- [Adding/replacing a node](docs/nodes.md)
 - [Upgrades basics](docs/upgrades.md)
 - [Roadmap](docs/roadmap.md)
 
@@ -105,7 +103,7 @@ vagrant up
 - **Ubuntu** 16.04, 18.04
 - **CentOS/RHEL** 7
 - **Fedora** 28
-- **Fedora CoreOS** (experimental: see [fcos Note](docs/fcos.md)
+- **Fedora/CentOS** Atomic
 - **openSUSE** Leap 42.3/Tumbleweed
 - **Oracle Linux** 7
 
@@ -114,27 +112,27 @@ Note: Upstart/SysV init based OS types are not supported.
 ## Supported Components
 
 - Core
-  - [kubernetes](https://github.com/kubernetes/kubernetes) v1.17.4
+  - [kubernetes](https://github.com/kubernetes/kubernetes) v1.16.8
   - [etcd](https://github.com/coreos/etcd) v3.3.12
   - [docker](https://www.docker.com/) v18.06 (see note)
   - [containerd](https://containerd.io/) v1.2.13
   - [cri-o](http://cri-o.io/) v1.14.0 (experimental: see [CRI-O Note](docs/cri-o.md). Only on centos based OS)
 - Network Plugin
-  - [cni-plugins](https://github.com/containernetworking/plugins) v0.8.5
-  - [calico](https://github.com/projectcalico/calico) v3.11.1
+  - [cni-plugins](https://github.com/containernetworking/plugins) v0.8.1
+  - [calico](https://github.com/projectcalico/calico) v3.7.3
   - [canal](https://github.com/projectcalico/canal) (given calico/flannel versions)
   - [cilium](https://github.com/cilium/cilium) v1.5.5
   - [contiv](https://github.com/contiv/install) v1.2.1
   - [flanneld](https://github.com/coreos/flannel) v0.11.0
-  - [kube-router](https://github.com/cloudnativelabs/kube-router) v0.4.0
-  - [multus](https://github.com/intel/multus-cni) v3.4
+  - [kube-router](https://github.com/cloudnativelabs/kube-router) v0.2.5
+  - [multus](https://github.com/intel/multus-cni) v3.2.1
   - [weave](https://github.com/weaveworks/weave) v2.5.2
 - Application
   - [cephfs-provisioner](https://github.com/kubernetes-incubator/external-storage) v2.1.0-k8s1.11
   - [rbd-provisioner](https://github.com/kubernetes-incubator/external-storage) v2.1.1-k8s1.11
   - [cert-manager](https://github.com/jetstack/cert-manager) v0.11.0
-  - [coredns](https://github.com/coredns/coredns) v1.6.7
-  - [ingress-nginx](https://github.com/kubernetes/ingress-nginx) v0.28.0
+  - [coredns](https://github.com/coredns/coredns) v1.6.0
+  - [ingress-nginx](https://github.com/kubernetes/ingress-nginx) v0.26.1
 
 Note: The list of validated [docker versions](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG-1.16.md) was updated to 1.13.1, 17.03, 17.06, 17.09, 18.06, 18.09. kubeadm now properly recognizes Docker 18.09.0 and newer, but still treats 18.06 as the default supported version. The kubelet might break on docker's non-standard version numbering (it no longer uses semantic versioning). To ensure auto-updates don't break your cluster look into e.g. yum versionlock plugin or apt pin).
 
@@ -166,10 +164,7 @@ You can choose between 10 network plugins. (default: `calico`, except Vagrant us
 
 - [flannel](docs/flannel.md): gre/vxlan (layer 2) networking.
 
-- [Calico](https://docs.projectcalico.org/latest/introduction/) is a networking and network policy provider. Calico supports a flexible set of networking options
-    designed to give you the most efficient networking across a range of situations, including non-overlay
-    and overlay networks, with or without BGP. Calico uses the same engine to enforce network policy for hosts,
-    pods, and (if using Istio and Envoy) applications at the service mesh layer.
+- [calico](docs/calico.md): bgp (layer 3) networking.
 
 - [canal](https://github.com/projectcalico/canal): a composition of calico and flannel plugins.
 
@@ -201,7 +196,7 @@ See also [Network checker](docs/netcheck.md).
 - [kubernetes.io/docs/setup/production-environment/tools/kubespray/](https://kubernetes.io/docs/setup/production-environment/tools/kubespray/)
 - [kubespray, monitoring and logging](https://github.com/gregbkr/kubernetes-kargo-logging-monitoring) by @gregbkr
 - [Deploy Kubernetes w/ Ansible & Terraform](https://rsmitty.github.io/Terraform-Ansible-Kubernetes/) by @rsmitty
-- [Deploy a Kubernetes Cluster with Kubespray (video)](https://www.youtube.com/watch?v=CJ5G4GpqDy0)
+- [Deploy a Kubernetes Cluster with Kubespray (video)](https://www.youtube.com/watch?v=N9q51JgbWu8)
 
 ## Tools and projects on top of Kubespray
 

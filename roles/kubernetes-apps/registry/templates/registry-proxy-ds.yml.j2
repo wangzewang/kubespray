@@ -31,8 +31,8 @@ spec:
             - name: REGISTRY_HOST
               value: registry.{{ registry_namespace }}.svc.{{ cluster_name }}
             - name: REGISTRY_PORT
-              value: "{{ registry_port }}"
+              value: "5000"
           ports:
             - name: registry
               containerPort: 80
-              hostPort: {{ registry_port }}
+              hostPort: 5000

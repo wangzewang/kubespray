@@ -43,10 +43,6 @@ rules:
   - ciliumnetworkpolicies/status
   - ciliumendpoints
   - ciliumendpoints/status
-  - ciliumnodes
-  - ciliumnodes/status
-  - ciliumidentities
-  - ciliumidentities/status
   verbs:
   - '*'
 ---
@@ -70,6 +66,7 @@ rules:
       - services
       - nodes
       - endpoints
+      - componentstatuses
     verbs:
       - get
       - list
@@ -92,9 +89,17 @@ rules:
     verbs:
       - patch
   - apiGroups:
-      - apiextensions.k8s.io
+      - extensions
     resources:
       - ingresses
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
       - customresourcedefinitions
     verbs:
       - create
@@ -107,13 +112,7 @@ rules:
     resources:
       - ciliumnetworkpolicies
       - ciliumnetworkpolicies/status
-      - ciliumclusterwidenetworkpolicies
-      - ciliumclusterwidenetworkpolicies/status
       - ciliumendpoints
       - ciliumendpoints/status
-      - ciliumnodes
-      - ciliumnodes/status
-      - ciliumidentities
-      - ciliumidentities/status
     verbs:
       - '*'

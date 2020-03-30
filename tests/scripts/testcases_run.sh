@@ -34,7 +34,7 @@ fi
 # Check out latest tag if testing upgrade
 test "${UPGRADE_TEST}" != "false" && git fetch --all && git checkout "$KUBESPRAY_VERSION"
 # Checkout the CI vars file so it is available
-test "${UPGRADE_TEST}" != "false" && git checkout "${CI_BUILD_REF}" tests/files/${CI_JOB_NAME}.yml tests/testcases/*.yml
+test "${UPGRADE_TEST}" != "false" && git checkout "${CI_BUILD_REF}" tests/files/${CI_JOB_NAME}.yml
 
 # Create cluster
 ansible-playbook ${LOG_LEVEL} -e @${CI_TEST_VARS} -e local_release_dir=${PWD}/downloads -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" cluster.yml
@@ -47,21 +47,12 @@ if [ "${UPGRADE_TEST}" != "false" ]; then
   ansible-playbook ${LOG_LEVEL} -e @${CI_TEST_VARS} -e local_release_dir=${PWD}/downloads -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" $PLAYBOOK
 fi
 
-# Test control plane recovery
-if [ "${RECOVER_CONTROL_PLANE_TEST}" != "false" ]; then
-  ansible-playbook ${LOG_LEVEL} -e @${CI_TEST_VARS} -e local_release_dir=${PWD}/downloads -e ansible_python_interpreter=${PYPATH} --limit "${RECOVER_CONTROL_PLANE_TEST_GROUPS}:!fake_hosts" -e reset_confirmation=yes reset.yml
-  ansible-playbook ${LOG_LEVEL} -e @${CI_TEST_VARS} -e local_release_dir=${PWD}/downloads -e ansible_python_interpreter=${PYPATH} -e etcd_retries=10 --limit etcd,kube-master:!fake_hosts recover-control-plane.yml
-fi
-
 # Tests Cases
 ## Test Master API
 ansible-playbook -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" tests/testcases/010_check-apiserver.yml $LOG_LEVEL
 
 ## Test that all pods are Running
 ansible-playbook -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" tests/testcases/015_check-pods-running.yml $LOG_LEVEL
-
-## Test that all nodes are Ready
-ansible-playbook -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" tests/testcases/020_check-nodes-ready.yml $LOG_LEVEL
 
 ## Test pod creation and ping between them
 ansible-playbook -e ansible_python_interpreter=${PYPATH} --limit "all:!fake_hosts" tests/testcases/030_check-network.yml $LOG_LEVEL

@@ -1,4 +1,4 @@
-# Comparison
+# Comparaison
 
 ## Kubespray vs [Kops](https://github.com/kubernetes/kops)
 

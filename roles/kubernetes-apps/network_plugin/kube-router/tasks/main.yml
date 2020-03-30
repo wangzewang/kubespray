@@ -8,8 +8,8 @@
     resource: "ds"
     namespace: "kube-system"
     state: "latest"
-  delegate_to: "{{ groups['kube-master'] | first }}"
-  run_once: true
+  when:
+    - inventory_hostname == groups['kube-master'][0]
 
 - name: kube-router | Wait for kube-router pods to be ready
   command: "{{ bin_dir }}/kubectl -n kube-system get pods -l k8s-app=kube-router -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==false)].metadata.name}'"   # noqa 601
@@ -18,6 +18,5 @@
   retries: 30
   delay: 10
   ignore_errors: yes
-  delegate_to: "{{ groups['kube-master'] | first }}"
-  run_once: true
-  changed_when: false
+  when:
+    - inventory_hostname == groups['kube-master'][0]

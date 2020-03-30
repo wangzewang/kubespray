@@ -22,7 +22,6 @@
 .terraform_validate:
   extends: .terraform_install
   stage: unit-tests
-  tags: [light]
   only: ['master', /^pr-.*$/]
   script:
     - terraform validate -var-file=cluster.tfvars contrib/terraform/$PROVIDER
@@ -30,7 +29,6 @@
 
 .terraform_apply:
   extends: .terraform_install
-  tags: [light]
   stage: deploy-part2
   when: manual
   only: [/^pr-.*$/]
@@ -105,17 +103,6 @@ tf-validate-aws:
   OS_REGION_NAME: UK1
   OS_INTERFACE: public
   OS_IDENTITY_API_VERSION: "3"
-
-tf-ovh_cleanup:
-  stage: unit-tests
-  tags: [light]
-  image: python
-  variables:
-    <<: *ovh_variables
-  before_script:
-    - pip install -r scripts/openstack-cleanup/requirements.txt
-  script:
-    - ./scripts/openstack-cleanup/main.py
 
 tf-ovh_ubuntu18-calico:
   extends: .terraform_apply

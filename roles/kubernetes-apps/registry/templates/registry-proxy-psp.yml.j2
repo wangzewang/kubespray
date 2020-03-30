@@ -36,8 +36,8 @@ spec:
     - 'persistentVolumeClaim'
   hostNetwork: true
   hostPorts:
-  - min: {{ registry_port }}
-    max: {{ registry_port }}
+  - min: 5000
+    max: 5000
   hostIPC: false
   hostPID: false
   runAsUser:

@@ -20,15 +20,10 @@ spec:
       serviceAccount: csi-cinder-controller-sa
       containers:
         - name: csi-attacher
-          image: {{ csi_attacher_image_repo }}:{{ csi_attacher_image_tag }}
+          image: quay.io/k8scsi/csi-attacher:v1.2.1
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
-{% if cinder_csi_controller_replicas is defined and cinder_csi_controller_replicas > 1 %}
-            - --leader-election
-            - --leader-election-type=leases
-            - --leader-election-namespace=kube-system
-{% endif %}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -37,17 +32,9 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-provisioner
-          image: {{ csi_provisioner_image_repo }}:{{ csi_provisioner_image_tag }}
+          image: quay.io/k8scsi/csi-provisioner:v1.3.0
           args:
             - "--csi-address=$(ADDRESS)"
-{% if cinder_topology is defined and cinder_topology %}
-            - --feature-gates=Topology=true
-{% endif %}
-{% if cinder_csi_controller_replicas is defined and cinder_csi_controller_replicas > 1 %}
-            - --enable-leader-election
-            - --leader-election-type=leases
-            - --leader-election-namespace=kube-system
-{% endif %}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -56,28 +43,20 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
-          image: {{ csi_snapshotter_image_repo }}:{{ csi_snapshotter_image_tag }}
+          image: quay.io/k8scsi/csi-snapshotter:v1.2.0
           args:
             - "--csi-address=$(ADDRESS)"
-{% if cinder_csi_controller_replicas is defined and cinder_csi_controller_replicas > 1 %}
-            - --leader-election
-            - --leader-election-namespace=kube-system
-{% endif %}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: {{ k8s_image_pull_policy }}
+          imagePullPolicy: Always
           volumeMounts:
             - mountPath: /var/lib/csi/sockets/pluginproxy/
               name: socket-dir
         - name: csi-resizer
-          image: {{ csi_resizer_image_repo }}:{{ csi_resizer_image_tag }}
+          image: quay.io/k8scsi/csi-resizer:v0.2.0
           args:
             - "--csi-address=$(ADDRESS)"
-{% if cinder_csi_controller_replicas is defined and cinder_csi_controller_replicas > 1 %}
-            - --leader-election
-            - --leader-election-namespace=kube-system
-{% endif %}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -86,7 +65,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: cinder-csi-plugin
-          image: {{ cinder_csi_plugin_image_repo }}:{{ cinder_csi_plugin_image_tag }}
+          image: docker.io/k8scloudprovider/cinder-csi-plugin:latest
           args :
             - /bin/cinder-csi-plugin
             - "--nodeid=$(NODE_ID)"
@@ -111,10 +90,7 @@ spec:
             - name: secret-cinderplugin
               mountPath: /etc/config
               readOnly: true
-            - name: ca-certs
-              mountPath: /etc/ssl/certs
-              readOnly: true
-{% if cinder_cacert is defined and cinder_cacert != "" %}
+{% if cinder_cacert is defined %}
             - name: cinder-cacert
               mountPath: {{ kube_config_dir }}/cinder-cacert.pem
               readOnly: true
@@ -125,11 +101,7 @@ spec:
         - name: secret-cinderplugin
           secret:
             secretName: cloud-config
-        - name: ca-certs
-          hostPath:
-            path: /etc/ssl/certs
-            type: DirectoryOrCreate
-{% if cinder_cacert is defined and cinder_cacert != "" %}
+{% if cinder_cacert is defined %}
         - name: cinder-cacert
           hostPath:
             path: {{ kube_config_dir }}/cinder-cacert.pem
