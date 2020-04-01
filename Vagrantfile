@@ -1,6 +1,5 @@
 # -*- mode: ruby -*-
-# # vi: set ft=ruby :
-
+# # vi: set ft=ruby : 
 # For help on using kubespray with vagrant, check out docs/vagrant.md
 
 require 'fileutils'
@@ -15,28 +14,19 @@ COREOS_URL_TEMPLATE = "https://storage.googleapis.com/%s.release.core-os.net/amd
 DISK_UUID = Time.now.utc.to_i
 
 SUPPORTED_OS = {
-  "coreos-stable"       => {box: "coreos-stable",      user: "core", box_url: COREOS_URL_TEMPLATE % ["stable"]},
-  "coreos-alpha"        => {box: "coreos-alpha",       user: "core", box_url: COREOS_URL_TEMPLATE % ["alpha"]},
-  "coreos-beta"         => {box: "coreos-beta",        user: "core", box_url: COREOS_URL_TEMPLATE % ["beta"]},
-  "ubuntu1604"          => {box: "generic/ubuntu1604", user: "vagrant"},
   "ubuntu1804"          => {box: "ubuntu", user: "vagrant"},
   "centos"              => {box: "centos/7",           user: "vagrant"},
-  "centos-bento"        => {box: "bento/centos-7.6",   user: "vagrant"},
-  "fedora"              => {box: "fedora/28-cloud-base",                user: "vagrant"},
-  "opensuse"            => {box: "opensuse/openSUSE-15.0-x86_64",       user: "vagrant"},
-  "opensuse-tumbleweed" => {box: "opensuse/openSUSE-Tumbleweed-x86_64", user: "vagrant"},
-  "oraclelinux"         => {box: "generic/oracle7", user: "vagrant"},
 }
 
 # Defaults for config options defined in CONFIG
 $num_instances = 3
 $instance_name_prefix = "k8s"
 $vm_gui = false
-$vm_memory = 2048
-$vm_cpus = 1
+$vm_memory = 8192
+$vm_cpus = 4
 $shared_folders = {}
 $forwarded_ports = {}
-$subnet = "172.17.8"
+$subnet = "172.17.0"
 $os = "ubuntu1804"
 $network_plugin = "flannel"
 # Setting multi_networking to true will install Multus: https://github.com/intel/multus-cni
@@ -114,35 +104,12 @@ Vagrant.configure("2") do |config|
 
       node.vm.hostname = vm_name
 
-      if Vagrant.has_plugin?("vagrant-proxyconf")
-        node.proxy.http     = ENV['HTTP_PROXY'] || ENV['http_proxy'] || ""
-        node.proxy.https    = ENV['HTTPS_PROXY'] || ENV['https_proxy'] ||  ""
-        node.proxy.no_proxy = $no_proxy
-      end
-
-      ["vmware_fusion", "vmware_workstation"].each do |vmware|
-        node.vm.provider vmware do |v|
-          v.vmx['memsize'] = $vm_memory
-          v.vmx['numvcpus'] = $vm_cpus
-        end
-      end
-
       node.vm.provider :virtualbox do |vb|
         vb.memory = $vm_memory
         vb.cpus = $vm_cpus
         vb.gui = $vm_gui
         vb.linked_clone = true
         vb.customize ["modifyvm", :id, "--vram", "8"] # ubuntu defaults to 256 MB which is a waste of precious RAM
-      end
-
-      node.vm.provider :libvirt do |lv|
-        lv.memory = $vm_memory
-        lv.cpus = $vm_cpus
-        lv.default_prefix = 'kubespray'
-        # Fix kernel panic on fedora 28
-        if $os == "fedora"
-          lv.cpu_mode = "host-passthrough"
-        end
       end
 
       if $kube_node_instances_with_disks
@@ -173,53 +140,22 @@ Vagrant.configure("2") do |config|
       ip = "#{$subnet}.#{i+100}"
       node.vm.network :private_network, ip: ip
 
-      # Disable swap for each vm
-      node.vm.provision "shell", inline: "swapoff -a"
-
-      host_vars[vm_name] = {
-        "ip": ip,
-        "flannel_interface": "eth1",
-        "kube_network_plugin": $network_plugin,
-        "kube_network_plugin_multus": $multi_networking,
-        "download_run_once": "True",
-        "download_localhost": "False",
-        "download_cache_dir": ENV['HOME'] + "/kubespray_cache",
-        # Make kubespray cache even when download_run_once is false
-        "download_force_cache": "True",
-        # Keeping the cache on the nodes can improve provisioning speed while debugging kubespray
-        "download_keep_remote_cache": "False",
-        "docker_keepcache": "1",
-        # These two settings will put kubectl and admin.config in $inventory/artifacts
-        "kubeconfig_localhost": "True",
-        "kubectl_localhost": "True",
-        "local_path_provisioner_enabled": "#{$local_path_provisioner_enabled}",
-        "local_path_provisioner_claim_root": "#{$local_path_provisioner_claim_root}",
-        "ansible_ssh_user": SUPPORTED_OS[$os][:user]
-      }
-
-      # Only execute the Ansible provisioner once, when all the machines are up and ready.
-      if i == $num_instances
-        node.vm.provision "ansible" do |ansible|
-          ansible.playbook = $playbook
-          $ansible_inventory_path = File.join( $inventory, "hosts.ini")
-          if File.exist?($ansible_inventory_path)
-            ansible.inventory_path = $ansible_inventory_path
-          end
-          ansible.become = true
-          ansible.limit = "all,localhost"
-          ansible.host_key_checking = false
-          ansible.raw_arguments = ["--forks=#{$num_instances}", "--flush-cache", "-e ansible_become_pass=vagrant"]
-          ansible.host_vars = host_vars
-          #ansible.tags = ['download']
-          ansible.groups = {
-            "etcd" => ["#{$instance_name_prefix}-[1:#{$etcd_instances}]"],
-            "kube-master" => ["#{$instance_name_prefix}-[1:#{$kube_master_instances}]"],
-            "kube-node" => ["#{$instance_name_prefix}-[1:#{$kube_node_instances}]"],
-            "k8s-cluster:children" => ["kube-master", "kube-node"],
-          }
-        end
-      end
-
+      config.vm.provision "shell", inline: <<-SHELL
+          sudo echo " " > /etc/apt/sources.list;
+          sudo echo "deb http://mirrors.aliyun.com/ubuntu/ bionic main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb-src http://mirrors.aliyun.com/ubuntu/ bionic main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb http://mirrors.aliyun.com/ubuntu/ bionic-security main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb-src http://mirrors.aliyun.com/ubuntu/ bionic-security main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb http://mirrors.aliyun.com/ubuntu/ bionic-updates main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb-src http://mirrors.aliyun.com/ubuntu/ bionic-updates main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb http://mirrors.aliyun.com/ubuntu/ bionic-proposed main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb-src http://mirrors.aliyun.com/ubuntu/ bionic-proposed main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb http://mirrors.aliyun.com/ubuntu/ bionic-backports main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo echo "deb-src http://mirrors.aliyun.com/ubuntu/ bionic-backports main restricted universe multiverse" >> /etc/apt/sources.list;
+          sudo apt-get update;
+          sudo echo " " >> /home/vagrant/.ssh/authorized_keys
+          sudo echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDPOUfPbIjWD5GzNPRfiN8tbv5o/MNEYcYFxcvMtWlfA2Tx4NNz2Ay3f4xzSMVsXg/mrS+2k+CM4zqTS/rOMFpttqa+eO+f0GZjWfdWYekaJfpab7/nkBxXGjvnJqWdV56VTyVh1sMFcqNaKOLVNSHKLcE8eFy/2Gn/SI+d5YNNBNGNtmQ/r3WV+irYpwTQAf6TGnGURyi0G9a/Sj8ZmNGiBZteQX3hMdQ3Vd73L+RvvR870IQhKl8AjrNrJDYV/vzkNriWzRxBU4qeZ2lR2/7rNdRWQzmaSUa8CZsk/hn9BAgS1139nrau84X/ATJED4Qm6jGeZIRzpO1IyuaAcFFY3dUGgnYlGtAC94g123hZgcSh8x3M9ghj/46T/fL7gOSPE132BAwf9LpachMyqCCfM1lVdxwG47Mq38riHYOSjrMU1JbpZe6lYb7n4cYyTe9fF09O3+0VOEKbk4Lu7dAuD7YuYcPgEmGNtiIQbTG/R5DNe6S6vGD/2MpWjWzt9OE= koala@dev" >> /home/vagrant/.ssh/authorized_keys
+      SHELL
     end
   end
 end
